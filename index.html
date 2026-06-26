@@ -1,0 +1,162 @@
+<!doctype html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" /> <!-- esto ayuda a que la página se vea bien en el teléfono -->
+    <title>Chat Socket.IO</title> <!-- el título que aparece en la pestaña -->
+    <style>
+      body {
+        margin: 0;
+        padding-bottom: 3rem;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
+      }
+
+      #header {
+        padding: 1rem;
+        background: #fafafa;
+        border-bottom: 1px solid #ddd;
+      }
+      #status {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+      #target {
+        min-width: 12rem;
+        padding: 0.4rem;
+        border-radius: 6px;
+      }
+      #messages {
+        list-style-type: none;
+        margin: 0;
+        padding: 0.5rem 0;
+      }
+      #messages > li {
+        padding: 0.5rem 1rem;
+      }
+      #messages > li:nth-child(odd) {
+        background: #efefef;
+      }
+      #form {
+        background: rgba(0, 0, 0, 0.15);
+        padding: 0.25rem;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        height: 3rem;
+        box-sizing: border-box;
+        backdrop-filter: blur(10px);
+      }
+      #input {
+        border: none;
+        padding: 0 1rem;
+        flex-grow: 1;
+        border-radius: 2rem;
+        margin: 0.25rem;
+      }
+      #input:focus {
+        outline: none;
+      }
+      #form > button {
+        background: #333;
+        border: none;
+        padding: 0 1rem;
+        margin: 0.25rem;
+        border-radius: 3px;
+        outline: none;
+        color: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="header"> <!-- esta es la parte de arriba donde está el ID propio -->
+      <div id="status"> <!-- aquí mostramos el estado y el selector -->
+        <div>Mi ID: <strong id="myId">...</strong></div> <!-- aquí aparecerá tu id -->
+        <label for="target">Chat con:</label> <!-- etiqueta para decir con quién chateas -->
+        <select id="target"> <!-- lista desplegable para elegir un amigo -->
+          <option value="">Selecciona un usuario</option>
+        </select>
+      </div>
+    </div>
+    <ul id="messages"></ul> <!-- aquí van los mensajes que llegan -->
+    <form id="form" action=""> <!-- este es el formulario para escribir mensajes -->
+      <input id="input" autocomplete="off" placeholder="Escribe un mensaje..." />
+      <button>Enviar</button>
+    </form>
+
+    <script src="/socket.io/socket.io.js"></script> <!-- traemos la librería de socket.io -->
+    <script>
+      const socket = io(); // conectamos con el servidor
+      const form = document.getElementById("form"); // encontramos el formulario
+      const input = document.getElementById("input"); // encontramos el campo donde escribes
+      const messages = document.getElementById("messages"); // encontramos la lista de mensajes
+      const myIdElement = document.getElementById("myId"); // encontramos el lugar del id
+      const targetSelect = document.getElementById("target"); // encontramos el selector de amigo
+      let myId = ""; // aquí guardamos nuestro id
+
+      function updateUserList(users) {
+        const selectedValue = targetSelect.value; // guardamos a quién teníamos seleccionado
+        targetSelect.innerHTML = '<option value="">Selecciona un usuario</option>'; // limpiamos la lista
+        users
+          .filter((userId) => userId !== myId) // quitamos nuestro propio id
+          .forEach((userId) => {
+            const option = document.createElement("option"); // creamos una opción nueva
+            option.value = userId; // ponemos el id como valor
+            option.textContent = userId; // mostramos el id en la lista
+            targetSelect.appendChild(option); // agregamos la opción a la lista
+          });
+        if (selectedValue && users.includes(selectedValue)) {
+          targetSelect.value = selectedValue; // si antes teníamos seleccionado uno, lo dejamos seleccionado
+        }
+      }
+
+      function addMessage(text) {
+        const item = document.createElement("li"); // creamos una nueva línea para el mensaje
+        item.textContent = text; // ponemos el texto dentro
+        messages.appendChild(item); // añadimos el mensaje a la lista
+        window.scrollTo(0, document.body.scrollHeight); // bajamos al final para ver el mensaje nuevo
+      }
+
+      form.addEventListener("submit", (e) => {
+        e.preventDefault(); // evitamos que la página se recargue
+        const targetId = targetSelect.value; // leemos a quién queremos escribir
+        if (!targetId) {
+          addMessage("Selecciona un usuario para chatear."); // si no hay amigo, avisamos
+          return;
+        }
+        if (input.value) {
+          socket.emit("chat message", input.value, targetId); // enviamos el mensaje al servidor
+          input.value = ""; // limpiamos el campo para escribir otro mensaje
+        }
+      });
+
+      targetSelect.addEventListener("focus", () => {
+        socket.emit("request users"); // cuando abrimos la lista, pedimos los usuarios conectados
+      });
+
+      socket.on("me", (id) => {
+        myId = id; // guardamos nuestro id
+        myIdElement.textContent = id; // mostramos nuestro id en pantalla
+      });
+
+      socket.on("users", (users) => {
+        updateUserList(users); // actualizamos la lista de amigos conectados
+      });
+
+      socket.on("chat message", (msg, fromId, toId) => {
+        if (toId === myId || fromId === myId) {
+          const prefix = fromId === myId ? `Yo -> ${toId}` : `${fromId} -> mí`; // ponemos quién habla
+          addMessage(`${prefix}: ${msg}`); // mostramos el mensaje
+        }
+      });
+
+      socket.on("chat error", (errorMessage) => {
+        addMessage(`Error: ${errorMessage}`); // mostramos errores si algo sale mal
+      });
+    </script>
+  </body>
+</html>
