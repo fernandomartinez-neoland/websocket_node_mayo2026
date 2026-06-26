@@ -6,7 +6,13 @@ import { Server } from "socket.io"; // importamos el guardián de los mensajes e
 
 const app = express(); // creamos la aplicación que enseña la página
 const server = createServer(app); // creamos el servidor que escucha la puerta
-const io = new Server(server); // creamos el lugar donde viven los mensajes en vivo
+const io = new Server(server, {
+  cors: {
+    // Aquí pones la URL de tu frontend en Vercel (sin la barra / al final)
+    origin: "http://127.0.0.1:5500",
+    methods: ["GET", "POST"], // Los métodos permitidos
+  },
+}); // creamos el lugar donde viven los mensajes en vivo
 
 const __dirname = dirname(fileURLToPath(import.meta.url)); // esta es la carpeta donde está este archivo
 const connectedUsers = new Map(); // aquí guardamos los amigos que están conectados

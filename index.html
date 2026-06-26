@@ -90,7 +90,7 @@
 
     <script src="/socket.io/socket.io.js"></script> <!-- traemos la librería de socket.io -->
     <script>
-      const socket = io(); // conectamos con el servidor
+      const socket = io('http://localhost:3000'); // conectamos con el servidor
       const form = document.getElementById("form"); // encontramos el formulario
       const input = document.getElementById("input"); // encontramos el campo donde escribes
       const messages = document.getElementById("messages"); // encontramos la lista de mensajes
